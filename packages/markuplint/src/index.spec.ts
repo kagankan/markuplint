@@ -78,8 +78,6 @@ describe('basic test', () => {
 		const { violations } = await mlTestFile('test/fixture/003.html');
 		const errors = violations.filter(v => v.severity === 'error');
 		const warns = violations.filter(v => v.severity === 'warning');
-		console.log(errors);
-		console.log(warns);
 
 		expect(errors.length).toBe(42);
 		expect(warns.length).toBe(4);
