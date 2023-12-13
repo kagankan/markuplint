@@ -106,4 +106,4 @@ export const reSplitterTag = /<[^>]+>/g;
  * - U+000C FORM FEED (FF) => `\f`
  * - U+0020 SPACE => ` `
  */
-export const defaultSpaces = ['\t', '\n', '\f', ' '] as const;
+export const defaultSpaces = ['\t', '\n', '\f', '\r', ' '] as const;
