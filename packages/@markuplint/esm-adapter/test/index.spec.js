@@ -31,6 +31,7 @@ describe('test', () => {
 		const file = await fs.readFile(filePath, { encoding: 'utf8' });
 		const name = path.basename(filePath);
 		const dirname = path.dirname(filePath);
+		console.log(file.replaceAll('\r', '\\r').replaceAll('\n', '\\n\n'));
 
 		const engine = await MLEngine.fromCode(file, {
 			name,
@@ -42,8 +43,6 @@ describe('test', () => {
 
 		const errors = result[0].violations.filter(v => v.severity === 'error');
 		const warns = result[0].violations.filter(v => v.severity === 'warning');
-		console.log(errors);
-		console.log(warns);
 
 		expect(errors.length).toBe(42);
 		expect(warns.length).toBe(4);
