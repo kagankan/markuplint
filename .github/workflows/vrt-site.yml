@@ -46,4 +46,4 @@ jobs:
             - uses: reg-viz/reg-actions@v2
               with:
                   github-token: '${{ secrets.GITHUB_TOKEN }}'
-                  image-directory-path: './__screenshots__'
+                  image-directory-path: './website/__screenshots__'
