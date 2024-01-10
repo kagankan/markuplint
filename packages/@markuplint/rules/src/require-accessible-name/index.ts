@@ -10,15 +10,14 @@ type Option = {
 };
 
 export default createRule<boolean, Option>({
+	meta: {
+		category: 'a11y',
+	},
 	defaultOptions: {
 		ariaVersion: ARIA_RECOMMENDED_VERSION,
 	},
 	async verify({ document, report, t }) {
 		await document.walkOn('Element', el => {
-			if (el.pretenderContext?.type === 'pretender') {
-				return;
-			}
-
 			if (accnameMayBeMutable(el, document)) {
 				return;
 			}

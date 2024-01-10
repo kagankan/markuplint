@@ -399,6 +399,25 @@ describe('parser', () => {
 		expect(doc.nodeList[2].nodeName).toBe('text');
 		expect(doc.nodeList[2].namespace).toBe('http://www.w3.org/2000/svg');
 	});
+
+	test('CRLF', () => {
+		const r = parse(
+			`<div
+>{
+#if
+bool
+}true{/if}</div
+>`.replaceAll('\n', '\r\n'),
+		);
+		const map = nodeListToDebugMaps(r.nodeList);
+		expect(map).toStrictEqual([
+			'[1:1]>[2:2](0,7)div: <div␣⏎>',
+			'[2:2]>[5:2](7,22)IfBlock: {␣⏎#if␣⏎bool␣⏎}',
+			'[5:2]>[5:6](22,26)#text: true',
+			'[5:6]>[5:11](26,31)IfBlock: {/if}',
+			'[5:11]>[6:2](31,39)div: </div␣⏎>',
+		]);
+	});
 });
 
 describe('Issues', () => {
@@ -554,6 +573,86 @@ describe('Issues', () => {
 			'[2:1]>[2:30](6,35)Comment: <!--␣It␣is␣a␣comment␣node␣-->',
 			'[2:30]>[3:1](35,36)#text: ⏎',
 			'[3:1]>[3:7](36,42)div: </div>',
+		]);
+	});
+
+	describe('#1321 whitespaces and line breaks in block token', () => {
+		test('if else', () => {
+			const r = parse('{\n\t#if cond\n}...{\n\t:else\n}...{\n\t/if\n}');
+			const map = nodeListToDebugMaps(r.nodeList, true);
+			expect(map).toStrictEqual([
+				'[1:1]>[3:2](0,13)IfBlock: {⏎→#if␣cond⏎}',
+				'[3:2]>[3:5](13,16)#text: ...',
+				'[3:5]>[5:2](16,26)ElseBlock: {⏎→:else⏎}',
+				'[5:2]>[5:5](26,29)#text: ...',
+				'[5:5]>[7:2](29,37)IfBlock: {⏎→/if⏎}',
+			]);
+		});
+		test('each', () => {
+			const r = parse('{\n\t#each expression as name\n}...{\n\t/each\n}');
+			const map = nodeListToDebugMaps(r.nodeList, true);
+			expect(map).toStrictEqual([
+				'[1:1]>[3:2](0,29)EachBlock: {⏎→#each␣expression␣as␣name⏎}',
+				'[3:2]>[3:5](29,32)#text: ...',
+				'[3:5]>[5:2](32,42)EachBlock: {⏎→/each⏎}',
+			]);
+		});
+		test('await', () => {
+			const r = parse('{\n\t#await expression\n}...{\n\t:then name\n}...{\n\t:catch name\n}...{\n\t/await\n}');
+			const map = nodeListToDebugMaps(r.nodeList, true);
+			expect(map).toStrictEqual([
+				'[1:1]>[3:2](0,22)PendingBlock: {⏎→#await␣expression⏎}',
+				'[3:2]>[3:5](22,25)#text: ...',
+				'[3:5]>[5:2](25,40)ThenBlock: {⏎→:then␣name⏎}',
+				'[5:2]>[5:5](40,43)#text: ...',
+				'[5:5]>[7:2](43,59)CatchBlock: {⏎→:catch␣name⏎}',
+				'[7:2]>[7:5](59,62)#text: ...',
+				'[7:5]>[9:2](62,73)AwaitBlock: {⏎→/await⏎}',
+			]);
+		});
+		test('key', () => {
+			const r = parse('{\n\t#key expression\n}...{\n\t/key\n}');
+			const map = nodeListToDebugMaps(r.nodeList, true);
+			expect(map).toStrictEqual([
+				'[1:1]>[3:2](0,20)KeyBlock: {⏎→#key␣expression⏎}',
+				'[3:2]>[3:5](20,23)#text: ...',
+				'[3:5]>[5:2](23,32)KeyBlock: {⏎→/key⏎}',
+			]);
+		});
+	});
+
+	test('#1286', () => {
+		const ast = parse(`{#each list as item, i (\`\${i}-\${i}\`)}
+	<div>{item}</div>
+{/each}`);
+		const map = nodeListToDebugMaps(ast.nodeList, true);
+		expect(map).toEqual([
+			'[1:1]>[2:2](0,39)EachBlock: {#each␣list␣as␣item,␣i␣(`${i}-${i}`)}⏎→',
+			'[2:2]>[2:7](39,44)div: <div>',
+			'[2:7]>[2:13](44,50)#ps:MustacheTag: {item}',
+			'[2:13]>[2:19](50,56)div: </div>',
+			'[2:19]>[3:1](56,57)#text: ⏎',
+			'[3:1]>[3:8](57,64)EachBlock: {/each}',
+		]);
+	});
+
+	test('#1364', () => {
+		const ast = parse('<a href={`https://${host}`}></a>');
+		const map = nodeListToDebugMaps(ast.nodeList, true);
+		expect(map).toEqual([
+			'[1:1]>[1:29](0,28)a: <a␣href={`https://${host}`}>',
+			'[1:4]>[1:28](3,27)href: href={`https://${host}`}',
+			'  [1:4]>[1:4](3,3)bN: ',
+			'  [1:4]>[1:8](3,7)name: href',
+			'  [1:8]>[1:8](7,7)bE: ',
+			'  [1:8]>[1:9](7,8)equal: =',
+			'  [1:9]>[1:9](8,8)aE: ',
+			'  [1:9]>[1:10](8,9)sQ: {',
+			'  [1:10]>[1:27](9,26)value: `https://${host}`',
+			'  [1:27]>[1:28](26,27)eQ: }',
+			'  isDirective: false',
+			'  isDynamicValue: true',
+			'[1:29]>[1:33](28,32)a: </a>',
 		]);
 	});
 });

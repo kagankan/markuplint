@@ -61,6 +61,7 @@
 		"Hiragino",
 		"Hirao",
 		"hoge",
+		"iconify",
 		"imgix",
 		"impp",
 		"Infima",
@@ -129,6 +130,7 @@
 		"Saeki",
 		"Saito",
 		"saphryn",
+		"shamokit",
 		"Shinpuku",
 		"shippokun",
 		"SMIL",
@@ -136,6 +138,7 @@
 		"syntaxical",
 		"textlintrc",
 		"Tominaga",
+		"TSES",
 		"Tsubasa",
 		"tyankatsu",
 		"tyankatsu0105",
@@ -160,7 +163,10 @@
 	"overrides": [
 		{
 			"filename": "packages/@markuplint/types/src/whatwg/check-autocomplete.spec.ts",
-			"words": ["neme", "emall"]
+			"words": [
+				"neme",
+				"emall"
+			]
 		}
 	]
 }

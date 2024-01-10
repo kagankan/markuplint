@@ -2859,7 +2859,7 @@ export class MLDocument<T extends RuleConfigValue, O extends PlainData = undefin
 			(hasSlot
 				? {
 						unknown: true,
-				  }
+					}
 				: '');
 		aria.focusable = focusable;
 
@@ -3171,9 +3171,6 @@ export class MLDocument<T extends RuleConfigValue, O extends PlainData = undefin
 	private _pretending(pretenders?: readonly Pretender[]) {
 		if (docLog.enabled) {
 			docLog('Pretending: %O', pretenders);
-		}
-		if (!pretenders) {
-			return;
 		}
 		for (const node of this.nodeList) {
 			if (node.is(node.ELEMENT_NODE)) {

@@ -7,6 +7,9 @@ type Options = {
 };
 
 export default createRule<boolean, Options>({
+	meta: {
+		category: 'maintainability',
+	},
 	defaultSeverity: 'warning',
 	defaultOptions: {},
 	async verify({ document, report, t }) {
@@ -18,8 +21,8 @@ export default createRule<boolean, Options>({
 			const ignoreList = Array.isArray(attr.rule.options.ignore)
 				? attr.rule.options.ignore
 				: attr.rule.options.ignore
-				  ? [attr.rule.options.ignore]
-				  : [];
+					? [attr.rule.options.ignore]
+					: [];
 
 			const name = attr.name;
 

@@ -27,6 +27,7 @@ describe('ignoreBlock', () => {
 					startTag: '<%',
 					taggedCode: '= test ',
 					endTag: '%>',
+					resolved: false,
 				},
 			],
 			maskChar: '',
@@ -45,6 +46,7 @@ describe('ignoreBlock', () => {
 					startTag: '<%',
 					taggedCode: '= test ',
 					endTag: '%>',
+					resolved: false,
 				},
 				{
 					type: 'ejs-tag',
@@ -52,6 +54,7 @@ describe('ignoreBlock', () => {
 					startTag: '<%',
 					taggedCode: '= test2 ',
 					endTag: '%>',
+					resolved: false,
 				},
 			],
 			maskChar: '',
@@ -70,6 +73,7 @@ describe('ignoreBlock', () => {
 					startTag: '<%',
 					taggedCode: '= test',
 					endTag: null,
+					resolved: false,
 				},
 			],
 			maskChar: '',
@@ -88,6 +92,26 @@ describe('ignoreBlock', () => {
 					startTag: '<%',
 					taggedCode: ' if () {\n\t\n} ',
 					endTag: '%>',
+					resolved: false,
+				},
+			],
+			maskChar: '',
+		});
+	});
+
+	test('CRLF', () => {
+		const result = ignoreBlock('<div><%\r\nif () {\r\n}\r\n%></div>', tags);
+		expect(result).toStrictEqual({
+			source: '<div><%\r\nif () {\r\n}\r\n%></div>',
+			replaced: '<div><!\n\n\n></div>',
+			stack: [
+				{
+					type: 'ejs-tag',
+					index: 5,
+					startTag: '<%',
+					taggedCode: '\r\nif () {\r\n}\r\n',
+					endTag: '%>',
+					resolved: false,
 				},
 			],
 			maskChar: '',
@@ -133,6 +157,7 @@ describe('ignoreBlock', () => {
 					startTag: '<%',
 					taggedCode: ' 1 ',
 					endTag: '%>',
+					resolved: false,
 				},
 				{
 					type: 'ejs-output-value',
@@ -140,6 +165,7 @@ describe('ignoreBlock', () => {
 					startTag: '<%=',
 					taggedCode: ' 3 ',
 					endTag: '%>',
+					resolved: false,
 				},
 				{
 					type: 'ejs-whitespace-slurping',
@@ -147,6 +173,7 @@ describe('ignoreBlock', () => {
 					startTag: '<%_',
 					taggedCode: ' 5 _',
 					endTag: '%>',
+					resolved: false,
 				},
 				{
 					type: 'ejs-output-unescaped',
@@ -154,6 +181,7 @@ describe('ignoreBlock', () => {
 					startTag: '<%-',
 					taggedCode: ' 7 -',
 					endTag: '%>',
+					resolved: false,
 				},
 			],
 			maskChar: '',
@@ -168,10 +196,9 @@ describe('restoreNode', () => {
 		const ast = parse(masked.replaced);
 		const restoredAst = restoreNode(ast.nodeList, masked);
 		const nodeMap = nodeListToDebugMaps(restoredAst, true);
-		// TODO: Remove the masks from Element.raw and Attribute.raw
 		expect(nodeMap).toStrictEqual([
-			'[1:1]>[1:24](0,23)div: <div␣attr="">',
-			'[1:6]>[1:23](5,22)attr: attr=""',
+			'[1:1]>[1:24](0,23)div: <div␣attr="<%␣attr␣%>">',
+			'[1:6]>[1:23](5,22)attr: ␣attr="<%␣attr␣%>"',
 			'  [1:5]>[1:6](4,5)bN: ␣',
 			'  [1:6]>[1:10](5,9)name: attr',
 			'  [1:10]>[1:10](9,9)bE: ',
@@ -256,12 +283,39 @@ describe('restoreNode', () => {
 		expect(restoredAst[0].attributes[0].value.raw).toBe('A<% attr %>B');
 	});
 
-	test('unexpected parsing', () => {
-		const code = '<div attr="<% attr %> "></div>';
+	test('CRLF', () => {
+		const code = '<div attr="\r\n<%\r\nattr\r\n%>\r\n"></div>';
 		const masked = ignoreBlock(code, tags);
 		const ast = parse(masked.replaced);
 		const restoredAst = restoreNode(ast.nodeList, masked);
-		expect(restoredAst).toStrictEqual([]);
+		expect(restoredAst[0].attributes[0].value.raw).toBe('\r\n<%\r\nattr\r\n%>\r\n');
+	});
+
+	test('Complex attributes', () => {
+		const code = '<div attr="<% attr %> <% attr %>bar<% attr %><% attr %>foo"></div>';
+		const masked = ignoreBlock(code, tags);
+		const ast = parse(masked.replaced);
+		expect(nodeListToDebugMaps(ast.nodeList)).toStrictEqual([
+			'[1:1]>[1:61](0,60)div: <div␣attr="<!>␣<!>bar<!><!>foo">',
+			'[1:61]>[1:67](60,66)div: </div>',
+		]);
+		const restoredAst = restoreNode(ast.nodeList, masked);
+		expect(nodeListToDebugMaps(restoredAst)).toStrictEqual([
+			'[1:1]>[1:61](0,60)div: <div␣attr="<%␣attr␣%>␣<%␣attr␣%>bar<%␣attr␣%><%␣attr␣%>foo">',
+			'[1:61]>[1:67](60,66)div: </div>',
+		]);
+	});
+
+	test('unexpected parsing', () => {
+		const code = '<div attr=<% attr %>></div>';
+		const masked = ignoreBlock(code, tags);
+		const ast = parse(masked.replaced);
+		expect(nodeListToDebugMaps(ast.nodeList)).toStrictEqual([
+			'[1:1]>[1:21](0,20)div: <div␣attr=<!>',
+			'[1:21]>[1:22](20,21)#text: >',
+			'[1:22]>[1:28](21,27)div: </div>',
+		]);
+		expect(() => restoreNode(ast.nodeList, masked)).toThrow('Parsing failed. Unsupported syntax detected');
 	});
 });
 
@@ -273,5 +327,116 @@ describe('Issues', () => {
 		const restoredAst = restoreNode(ast.nodeList, masked);
 		expect(restoredAst[2].parentNode?.uuid).toBe(restoredAst[0].uuid);
 		expect(restoredAst[2].prevNode?.uuid).toBe(restoredAst[1].uuid);
+	});
+
+	test('#1147', () => {
+		const code = `
+			<body>
+				<label for="cheese">Do you like cheese?</label>
+				<input type="checkbox" id="cheese">
+				<% pp "anything" %>
+			</body>
+		`;
+		const masked = ignoreBlock(code, tags);
+		const ast = parse(masked.replaced);
+		const maps = nodeListToDebugMaps(ast.nodeList);
+		expect(maps).toStrictEqual([
+			'[1:1]>[2:4](0,4)#text: ⏎→→→',
+			'[2:4]>[2:10](4,10)body: <body>',
+			'[2:10]>[3:5](10,15)#text: ⏎→→→→',
+			'[3:5]>[3:25](15,35)label: <label␣for="cheese">',
+			'[3:25]>[3:44](35,54)#text: Do␣you␣like␣cheese?',
+			'[3:44]>[3:52](54,62)label: </label>',
+			'[3:52]>[4:5](62,67)#text: ⏎→→→→',
+			'[4:5]>[4:40](67,102)input: <input␣type="checkbox"␣id="cheese">',
+			'[4:40]>[5:5](102,107)#text: ⏎→→→→',
+			'[5:5]>[5:24](107,126)#comment: <!>',
+			'[5:24]>[6:4](126,130)#text: ⏎→→→',
+			'[6:4]>[6:11](130,137)body: </body>',
+			'[6:11]>[7:3](137,140)#text: ⏎→→',
+		]);
+		expect(ast.nodeList.map(n => n.nodeName)).toStrictEqual([
+			'#text',
+			'body',
+			'#text',
+			'label',
+			'#text',
+			'label',
+			'#text',
+			'input',
+			'#text',
+			'#comment',
+			'#text',
+			'body',
+			'#text',
+		]);
+		expect(ast.nodeList[1].childNodes.map(n => n.nodeName)).toStrictEqual([
+			'#text',
+			'label',
+			'#text',
+			'input',
+			'#text',
+			'#comment',
+			'#text',
+		]);
+
+		const restoredAst = restoreNode(ast.nodeList, masked);
+		const maps2 = nodeListToDebugMaps(restoredAst);
+		expect(maps2).toStrictEqual([
+			'[1:1]>[2:4](0,4)#text: ⏎→→→',
+			'[2:4]>[2:10](4,10)body: <body>',
+			'[2:10]>[3:5](10,15)#text: ⏎→→→→',
+			'[3:5]>[3:25](15,35)label: <label␣for="cheese">',
+			'[3:25]>[3:44](35,54)#text: Do␣you␣like␣cheese?',
+			'[3:44]>[3:52](54,62)label: </label>',
+			'[3:52]>[4:5](62,67)#text: ⏎→→→→',
+			'[4:5]>[4:40](67,102)input: <input␣type="checkbox"␣id="cheese">',
+			'[4:40]>[5:5](102,107)#text: ⏎→→→→',
+			'[5:5]>[5:24](107,126)#ps:ejs-tag: <%␣pp␣"anything"␣%>',
+			'[5:24]>[6:4](126,130)#text: ⏎→→→',
+			'[6:4]>[6:11](130,137)body: </body>',
+			'[6:11]>[7:3](137,140)#text: ⏎→→',
+		]);
+		expect(restoredAst.map(n => n.nodeName)).toStrictEqual([
+			'#text',
+			'body',
+			'#text',
+			'label',
+			'#text',
+			'label',
+			'#text',
+			'input',
+			'#text',
+			'#ps:ejs-tag',
+			'#text',
+			'body',
+			'#text',
+		]);
+		expect(restoredAst[1].childNodes.map(n => n.nodeName)).toStrictEqual([
+			'#text',
+			'label',
+			'#text',
+			'input',
+			'#text',
+			'#ps:ejs-tag',
+			'#text',
+		]);
+	});
+
+	test('#1261', () => {
+		const code = `<svg width="11" height="19" viewBox="0 0 11 19" class="ms-1">
+			<use href="{% static 'images/icons-test/angle-right.svg' %}#icon"></use>
+		</svg>`;
+		const masked = ignoreBlock(code, tags);
+		const ast = parse(masked.replaced);
+		const restoredAst = restoreNode(ast.nodeList, masked);
+		expect(nodeListToDebugMaps(restoredAst)).toStrictEqual([
+			'[1:1]>[1:62](0,61)svg: <svg␣width="11"␣height="19"␣viewBox="0␣0␣11␣19"␣class="ms-1">',
+			'[1:62]>[2:4](61,65)#text: ⏎→→→',
+			'[2:4]>[2:70](65,131)use: <use␣href="{%␣static␣\'images/icons-test/angle-right.svg\'␣%}#icon">',
+			'[2:70]>[2:76](131,137)use: </use>',
+			'[2:76]>[3:3](137,140)#text: ⏎→→',
+			'[3:3]>[3:9](140,146)svg: </svg>',
+		]);
 	});
 });

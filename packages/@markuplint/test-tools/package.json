@@ -1,6 +1,6 @@
 {
 	"name": "@markuplint/test-tools",
-	"version": "4.0.0-alpha.6",
+	"version": "4.0.0-alpha.9",
 	"description": "A private package for testing in this repository",
 	"repository": "git@github.com:markuplint/markuplint.git",
 	"author": "Yusuke Hirao <yusukehirao@me.com>",
@@ -24,16 +24,16 @@
 		"clean": "tsc --build --clean"
 	},
 	"dependencies": {
-		"@vitest/coverage-v8": "^0.34.5",
+		"@vitest/coverage-v8": "^1.1.1",
 		"browser-resolve": "^2.0.0",
 		"coveralls": "^3.1.1",
 		"execa": "^8.0.1",
 		"glob": "^10.3.6",
-		"jsdom": "^23.0.0",
+		"jsdom": "^23.0.1",
 		"strip-json-comments": "^5.0.1",
 		"test-markuplint": "npm:markuplint@next",
 		"textlint-rule-prh": "^5.3.0",
-		"type-fest": "^4.8.2",
-		"vitest": "^0.34.5"
+		"type-fest": "^4.9.0",
+		"vitest": "^1.1.1"
 	}
 }

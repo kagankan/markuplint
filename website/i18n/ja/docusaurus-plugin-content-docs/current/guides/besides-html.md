@@ -22,20 +22,21 @@ npm install -D @markuplint/vue-parser @markuplint/vue-spec
 
 ### サポートしている構文 {#supported-syntaxes}
 
-| テンプレートエンジンまたは構文                                                             | パーサ                        | スペック                 |
-| ------------------------------------------------------------------------------------------ | ----------------------------- | ------------------------ |
-| [**JSX**](https://react.dev/learn/writing-markup-with-jsx)                                 | `@markuplint/jsx-parser`      | `@markuplint/react-spec` |
-| [**Vue**](https://vuejs.org/)                                                              | `@markuplint/vue-parser`      | `@markuplint/vue-spec`   |
-| [**Svelte**](https://svelte.dev/)                                                          | `@markuplint/svelte-parser`   | -                        |
-| [**Astro**](https://astro.build/)                                                          | `@markuplint/astro-parser`    | -                        |
-| [**Pug**](https://pugjs.org/)                                                              | `@markuplint/pug-parser`      | -                        |
-| [**PHP**](https://www.php.net/)                                                            | `@markuplint/php-parser`      | -                        |
-| [**Smarty**](https://www.smarty.net/)                                                      | `@markuplint/smarty-parser`   | -                        |
-| [**eRuby**](https://docs.ruby-lang.org/en/master/ERB.html)                                 | `@markuplint/erb-parser`      | -                        |
-| [**EJS**](https://ejs.co/)                                                                 | `@markuplint/ejs-parser`      | -                        |
-| [**Mustache**](https://mustache.github.io/) or [**Handlebars**](https://handlebarsjs.com/) | `@markuplint/mustache-parser` | -                        |
-| [**Nunjucks**](https://mozilla.github.io/nunjucks/)                                        | `@markuplint/nunjucks-parser` | -                        |
-| [**Liquid**](https://liquidjs.com/)                                                        | `@markuplint/liquid-parser`   | -                        |
+| テンプレートエンジンまたは構文                                                             | パーサ                          | スペック                 |
+| ------------------------------------------------------------------------------------------ | ------------------------------- | ------------------------ |
+| [**JSX**](https://react.dev/learn/writing-markup-with-jsx)                                 | `@markuplint/jsx-parser`        | `@markuplint/react-spec` |
+| [**Vue**](https://vuejs.org/)                                                              | `@markuplint/vue-parser`        | `@markuplint/vue-spec`   |
+| [**Svelte**](https://svelte.dev/)                                                          | `@markuplint/svelte-parser`     | -                        |
+| [**SvelteKit**](https://kit.svelte.dev/)                                                   | `@markuplint/svelte-parser/kit` | -                        |
+| [**Astro**](https://astro.build/)                                                          | `@markuplint/astro-parser`      | -                        |
+| [**Pug**](https://pugjs.org/)                                                              | `@markuplint/pug-parser`        | -                        |
+| [**PHP**](https://www.php.net/)                                                            | `@markuplint/php-parser`        | -                        |
+| [**Smarty**](https://www.smarty.net/)                                                      | `@markuplint/smarty-parser`     | -                        |
+| [**eRuby**](https://docs.ruby-lang.org/en/master/ERB.html)                                 | `@markuplint/erb-parser`        | -                        |
+| [**EJS**](https://ejs.co/)                                                                 | `@markuplint/ejs-parser`        | -                        |
+| [**Mustache**](https://mustache.github.io/) or [**Handlebars**](https://handlebarsjs.com/) | `@markuplint/mustache-parser`   | -                        |
+| [**Nunjucks**](https://mozilla.github.io/nunjucks/)                                        | `@markuplint/nunjucks-parser`   | -                        |
+| [**Liquid**](https://liquidjs.com/)                                                        | `@markuplint/liquid-parser`     | -                        |
 
 :::note
 
@@ -80,16 +81,6 @@ npm install -D @markuplint/vue-parser @markuplint/vue-spec
 <div attr={{ value }}></div>
 ```
 <!-- prettier-ignore-end -->
-
-タグとスペースが混在しているコード。
-
-```html
-<div attr=" {{ value }} "></div>
-```
-
-```html
-<div attr="{{ value }} {{ value2 }}"></div>
-```
 
 **プルリクエスト募集中**: この問題は、開発者は認識しており、Issue [#240](https://github.com/markuplint/markuplint/issues/240)として作られています。
 
@@ -193,3 +184,26 @@ const Component = ({ list }) => {
 <!-- prettier-ignore-end -->
 
 必要であれば、設定の[`pretenders`](/docs/configuration/properties#pretenders)プロパティの詳細を参照してください。
+
+### `as`属性について
+
+コンポーネントに`as`属性が指定されている場合、その属性の値として指定された要素として評価されます。
+
+<!-- prettier-ignore-start -->
+```html
+<x-ul as="ul"><!-- <ul> として評価される -->
+  <x-li as="li"></x-li><!-- <li> として評価される -->
+  <x-li as="li"></x-li><!-- <li> として評価される -->
+  <x-li as="li"></x-li><!-- <li> として評価される -->
+</x-ul>
+```
+<!-- prettier-ignore-end -->
+
+これは、コンポーネントから継承された属性に対しても同様に評価されます。
+
+<!-- prettier-ignore-start -->
+```html
+<!-- <img src="image.png" alt="image"> として評価される -->
+<x-img src="image.png" alt="image">
+```
+<!-- prettier-ignore-end -->
