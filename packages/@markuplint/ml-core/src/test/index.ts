@@ -18,8 +18,7 @@ export function createTestDocument<T extends RuleConfigValue = any, O extends Pl
 	sourceCode: string,
 	options?: CreateTestOptions,
 ) {
-	const normalizedCode = sourceCode.replaceAll(/\r\n?/g, '\n');
-	const ast = options?.parser ? options.parser.parse(normalizedCode) : parse(normalizedCode);
+	const ast = options?.parser ? options.parser.parse(sourceCode) : parse(sourceCode);
 	const ruleset = convertRuleset(options?.config);
 	const document = new Document<T, O>(ast, ruleset, [options?.specs ?? ({} as any), {}]);
 	return document;
