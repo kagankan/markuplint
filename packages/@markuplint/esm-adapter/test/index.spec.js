@@ -43,7 +43,7 @@ describe('test', () => {
 
 		const errors = result[0].violations.filter(v => v.severity === 'error');
 		const warns = result[0].violations.filter(v => v.severity === 'warning');
-
+		console.log(errors);
 		expect(errors.length).toBe(42);
 		expect(warns.length).toBe(4);
 	});
