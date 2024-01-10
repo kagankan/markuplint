@@ -12,7 +12,7 @@ export default function Home(): JSX.Element {
       <Hero getStarted="Get Started" rules="See rules" faq="Check FAQ" />
       <main>
         <HomepageFeatures
-          heading="Main features diff test"
+          heading="Main features"
           features={[
             {
               title: 'Conformance checking',
