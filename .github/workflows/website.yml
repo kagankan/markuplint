@@ -158,7 +158,9 @@ jobs:
               with:
                   github-token: ${{ secrets.GITHUB_TOKEN }}
                   script: |
-                      // get all workflow runs in target branch
+                      if (!context.payload.pull_request) {
+                          return '';
+                      }
                       const runs = await github.rest.actions.listWorkflowRuns({
                           owner: context.repo.owner,
                           repo: context.repo.repo,
