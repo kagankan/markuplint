@@ -55,14 +55,9 @@ jobs:
             - name: Capture screenshots
               run: cd website && yarn site:screenshot
 
-            - uses: reg-viz/reg-actions@v2
-              with:
-                  github-token: '${{ secrets.GITHUB_TOKEN }}'
-                  image-directory-path: './website/__screenshots__'
-
             - uses: actions/github-script@v7
               id: get-target-hash
-              if: github.event_name == 'pull_request'
+              if: github.event_name == 'pull_request_target'
               with:
                   github-token: ${{ secrets.GITHUB_TOKEN }}
                   result-encoding: string
