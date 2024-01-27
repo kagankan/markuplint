@@ -157,6 +157,7 @@ jobs:
               id: get-target-hash
               with:
                   github-token: ${{ secrets.GITHUB_TOKEN }}
+                  result-encoding: string
                   script: |
                       // get all workflow runs in target branch
                       const runs = await github.rest.actions.listWorkflowRuns({
