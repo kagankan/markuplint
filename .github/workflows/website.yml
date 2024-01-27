@@ -166,6 +166,7 @@ jobs:
                           workflow_id: 'website.yml',
                           branch: context.payload.pull_request.base.ref,
                       });
+                      console.log(runs.data.workflow_runs);
                       if (runs.data.workflow_runs.length === 0) {
                           return context.payload.pull_request.base.sha;
                       } else {
