@@ -1,0 +1,178 @@
+name: Website Test
+
+on:
+    pull_request:
+        branches:
+            - dev
+        paths:
+            - 'website/**'
+            - '.github/workflows/website.yml'
+    push: # for artifact and cache saving
+        branches:
+            - dev
+        paths:
+            - 'website/**'
+            - '.github/workflows/website.yml'
+
+env:
+    NODE_BUILD_VERSION: 18
+
+jobs:
+    dev-setup:
+        runs-on: ${{ matrix.os }}
+        strategy:
+            fail-fast: false
+            matrix:
+                os: [ubuntu-latest]
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Use Node.js ${{ env.NODE_BUILD_VERSION }}
+              uses: actions/setup-node@v4
+              with:
+                  node-version: ${{ env.NODE_BUILD_VERSION }}
+
+            - name: Cache website dependencies
+              uses: actions/cache@v3
+              with:
+                  path: 'website/node_modules'
+                  key: website-depends-${{ matrix.os }}-node${{ env.NODE_BUILD_VERSION }}-${{ hashFiles('website/yarn.lock') }}
+                  restore-keys: |
+                      website-depends-${{ matrix.os }}-node${{ env.NODE_BUILD_VERSION }}-
+
+            - name: Install website dependencies
+              run: cd website && yarn install --frozen-lockfile --check-files
+
+    build:
+        if: github.event_name == 'pull_request'
+        needs: dev-setup
+        runs-on: ${{ matrix.os }}
+        strategy:
+            fail-fast: false
+            matrix:
+                os: [ubuntu-latest]
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Use Node.js ${{ env.NODE_BUILD_VERSION }}
+              uses: actions/setup-node@v4
+              with:
+                  node-version: ${{ env.NODE_BUILD_VERSION }}
+
+            - name: Cache restore website dependencies
+              uses: actions/cache/restore@v3
+              with:
+                  path: 'website/node_modules'
+                  key: website-depends-${{ matrix.os }}-node${{ env.NODE_BUILD_VERSION }}-${{ hashFiles('website/yarn.lock') }}
+                  restore-keys: |
+                      website-depends-${{ matrix.os }}-node${{ env.NODE_BUILD_VERSION }}-
+
+            - name: Build
+              run: cd website && yarn site:build
+
+    lint:
+        if: github.event_name == 'pull_request'
+        needs: dev-setup
+        runs-on: ${{ matrix.os }}
+        strategy:
+            fail-fast: false
+            matrix:
+                os: [ubuntu-latest]
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Use Node.js ${{ env.NODE_BUILD_VERSION }}
+              uses: actions/setup-node@v4
+              with:
+                  node-version: ${{ env.NODE_BUILD_VERSION }}
+
+            # root dependencies are needed for eslint plugins
+            - name: Cache restore root devDependencies
+              uses: actions/cache/restore@v3
+              with:
+                  path: 'node_modules'
+                  key: dev-depends-${{ matrix.os }}-node${{ env.NODE_BUILD_VERSION }}-${{ hashFiles('yarn.lock') }}
+                  restore-keys: |
+                      dev-depends-${{ matrix.os }}-node${{ env.NODE_BUILD_VERSION }}-
+
+            - name: Install root dependencies
+              run: yarn install --frozen-lockfile --check-files
+
+            - name: Cache restore website dependencies
+              uses: actions/cache/restore@v3
+              with:
+                  path: 'website/node_modules'
+                  key: website-depends-${{ matrix.os }}-node${{ env.NODE_BUILD_VERSION }}-${{ hashFiles('website/yarn.lock') }}
+                  restore-keys: |
+                      website-depends-${{ matrix.os }}-node${{ env.NODE_BUILD_VERSION }}-
+
+            - name: Lint
+              run: |
+                  cd website
+                  ERROR=0
+                  yarn site:lint:prettier || ERROR=1
+                  yarn site:lint:eslint || ERROR=1
+                  yarn site:lint:stylelint || ERROR=1
+                  yarn site:lint:cspell || ERROR=1
+                  yarn site:lint:textlint || ERROR=1
+                  yarn site:lint:markuplint || ERROR=1
+                  exit $ERROR
+
+    visual-regression-test:
+        needs: dev-setup
+        runs-on: ${{ matrix.os }}
+        strategy:
+            fail-fast: false
+            matrix:
+                os: [ubuntu-latest]
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Use Node.js ${{ env.NODE_BUILD_VERSION }}
+              uses: actions/setup-node@v4
+              with:
+                  node-version: ${{ env.NODE_BUILD_VERSION }}
+
+            - name: Cache restore website dependencies
+              uses: actions/cache/restore@v3
+              with:
+                  path: 'website/node_modules'
+                  key: website-depends-${{ matrix.os }}-node${{ env.NODE_BUILD_VERSION }}-${{ hashFiles('website/yarn.lock') }}
+                  restore-keys: |
+                      website-depends-${{ matrix.os }}-node${{ env.NODE_BUILD_VERSION }}-
+
+            - name: Cache playwright binaries
+              uses: actions/cache@v3
+              with:
+                  path: ~/.cache/ms-playwright
+                  key: ${{ runner.os }}-playwright-${{ hashFiles('website/yarn.lock') }}
+
+            - name: Install Playwright Browsers
+              run: npx playwright install --with-deps chromium
+
+            - name: Capture screenshots
+              run: cd website && yarn site:screenshot
+
+            - uses: actions/github-script@v7
+              id: get-target-hash
+              with:
+                  github-token: ${{ secrets.GITHUB_TOKEN }}
+                  script: |
+                      // get all workflow runs in target branch
+                      const runs = await github.rest.actions.listWorkflowRuns({
+                          owner: context.repo.owner,
+                          repo: context.repo.repo,
+                          workflow_id: 'website.yml',
+                          branch: context.payload.pull_request.base.ref,
+                      });
+                      if (runs.data.workflow_runs.length === 0) {
+                          return context.payload.pull_request.base.sha;
+                      } else {
+                          return runs.data.workflow_runs[0].head_sha;
+                      }
+
+            - uses: reg-viz/reg-actions@v2
+              with:
+                  github-token: '${{ secrets.GITHUB_TOKEN }}'
+                  image-directory-path: './website/__screenshots__'
+                  target-hash: '${{ steps.get-target-hash.outputs.result }}'
